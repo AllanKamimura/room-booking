@@ -1,0 +1,45 @@
+# Node modules and build output
+node_modules
+dist
+build
+.cache
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+.vscode
+.idea
+*.swp
+
+# Test and coverage
+coverage
+*.test.*
+*.spec.*
+
+# Env files (uncomment if you don't want to include them)
+# .env
+# .env.*
+
+# Misc
+*.tgz
+*.gz
+*.zip
+*.bak
+*.tmp
+*.log
+
+# Git
+.git
+.gitignore
+
+# Docker
+.dockerignore
+
+# SAM/Serverless backend (if not needed in frontend container)
+sam-backend
