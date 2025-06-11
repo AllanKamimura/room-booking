@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import "./App.css";
 
 // Helper: parse "HH:MM" to minutes since 00:00
@@ -27,15 +27,44 @@ const API_BASE_URL = import.meta.env.VITE_ROOM_API_BASE_URL || "http://localhost
 type Room = { name: string; color: string };
 type Booking = { room: string; start: string; end: string };
 
+function getNowInSaoPaulo() {
+  // Get the current time in America/Sao_Paulo as a Date object
+  const now = new Date();
+  // Get the time parts in the target timezone
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Sao_Paulo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  })
+    .formatToParts(now)
+    .reduce((acc, part) => {
+      if (part.type !== "literal") acc[part.type] = part.value;
+      return acc;
+    }, {} as Record<string, string>);
+  // Construct a Date object in local time with the Sao Paulo time parts
+  return new Date(
+    `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}:${parts.second}`
+  );
+}
+
 function App() {
   const [rooms, setRooms] = useState<Room[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [animatedBlocks, setAnimatedBlocks] = useState<Record<string, AnimationType | null>>({});
 
+  // For hour grid lines alignment
+  const tableContainerRef = useRef<HTMLDivElement>(null);
+  const hourCellRefs = useRef<(HTMLTableCellElement | null)[]>([]);
+  const [hourCellLefts, setHourCellLefts] = useState<number[]>([]);
+
   // Fetch rooms and bookings from API
   async function fetchData() {
     try {
-      console.log("Fetching:", `${API_BASE_URL}/rooms`, `${API_BASE_URL}/booking`);
       const [roomsRes, bookingsRes] = await Promise.all([
         fetch(`${API_BASE_URL}/rooms`),
         fetch(`${API_BASE_URL}/booking`)
@@ -46,13 +75,12 @@ function App() {
       setRooms(roomsData);
       setBookings(bookingsData);
     } catch (err) {
-      console.error("API fetch error:", err);
+      // Optionally handle error
     }
   }
 
   // Fetch on mount and every 10 minutes (ignore time for debugging)
   useEffect(() => {
-    console.log("API_BASE_URL:", API_BASE_URL);
     fetchData();
     const interval = setInterval(() => {
       fetchData();
@@ -112,15 +140,30 @@ function App() {
       });
   }
 
-  // Current date/time state
-  const [now, setNow] = useState(new Date());
+  // For hour grid lines: measure cell positions after render
   useEffect(() => {
-    const timer = setInterval(() => setNow(new Date()), 1000);
+    function updateHourCellLefts() {
+      if (!tableContainerRef.current) return;
+      const containerRect = tableContainerRef.current.getBoundingClientRect();
+      const lefts = hourCellRefs.current.map(
+        (cell) => cell ? cell.getBoundingClientRect().left - containerRect.left : 0
+      );
+      setHourCellLefts(lefts);
+    }
+    updateHourCellLefts();
+    window.addEventListener("resize", updateHourCellLefts);
+    return () => window.removeEventListener("resize", updateHourCellLefts);
+  }, [rooms, bookings]);
+
+  const [now, setNow] = useState(getNowInSaoPaulo());
+  useEffect(() => {
+    const timer = setInterval(() => setNow(getNowInSaoPaulo()), 1000);
     return () => clearInterval(timer);
   }, []);
 
   function formatDateTime(date: Date) {
-    return date.toLocaleString(undefined, {
+    // Format as UTC-3
+    return date.toLocaleString("en-US", {
       year: "numeric",
       month: "short",
       day: "2-digit",
@@ -128,6 +171,7 @@ function App() {
       minute: "2-digit",
       second: "2-digit",
       hour12: false,
+      timeZone: "America/Sao_Paulo",
     });
   }
 
@@ -151,15 +195,27 @@ function App() {
         {formatDateTime(now)}
       </div>
       <h1 className="title">Meeting Room Booking Overview</h1>
-      <div className="table-container full-table" style={{ position: "relative" }}>
+      <div
+        className="table-container full-table"
+        style={{ position: "relative", paddingBottom: 32 }}
+        ref={tableContainerRef}
+      >
+        {/* Hour grid lines */}
+        <HourGridLines hourCellLefts={hourCellLefts} />
         {/* Current time vertical line */}
-        <CurrentTimeLine />
+        <CurrentTimeLine hourCellLefts={hourCellLefts} />
         <table className="booking-table">
           <thead>
             <tr>
               <th>Room</th>
-              {hourSlots.map((slot) => (
-                <th key={slot}>{slot}</th>
+              {hourSlots.map((slot, i) => (
+                <th
+                  key={slot}
+                  ref={el => { hourCellRefs.current[i] = el; }}
+                  style={{ position: "relative" }}
+                >
+                  {slot}
+                </th>
               ))}
             </tr>
           </thead>
@@ -224,38 +280,103 @@ function App() {
         </table>
       </div>
       <p className="footer">
-        Made with 🍞 by Toradex
+        Made with <img src="https://icons.iconarchive.com/icons/google/noto-emoji-food-drink/256/32371-bread-icon.png" alt="🍞" width="24" height="24" /> by Toradex
       </p>
     </div>
   );
 }
 
+/** Hour grid lines component */
+function HourGridLines({ hourCellLefts }: { hourCellLefts: number[] }) {
+  // Draw a vertical line at each hour cell (except the first, which is 06:00)
+  return (
+    <>
+      {hourCellLefts.map((left, i) =>
+        i === 0 ? null : (
+          <div
+            key={i}
+            style={{
+              position: "absolute",
+              top: 0,
+              left,
+              width: "2px",
+              height: "96%",
+              background: "rgba(99,102,241,0.13)",
+              zIndex: 5,
+              pointerEvents: "none",
+            }}
+          />
+        )
+      )}
+    </>
+  );
+}
+
 /** Current time vertical line component */
-function CurrentTimeLine() {
-  // Get current time in minutes since 00:00
-  const now = new Date();
+function CurrentTimeLine({ hourCellLefts }: { hourCellLefts: number[] }) {
+  // Get current time in minutes since 00:00 in America/Sao_Paulo
+  const now = getNowInSaoPaulo();
   const nowMin = now.getHours() * 60 + now.getMinutes();
   const startMin = 6 * 60;
   const endMin = 18 * 60;
   // Only show if within range
-  if (nowMin < startMin || nowMin > endMin) return null;
-  // Calculate percent from 06:00 to 18:00 (12 hours)
-  const percent = ((nowMin - startMin) / (endMin - startMin)) * 100;
+  if (nowMin < startMin || nowMin > endMin || hourCellLefts.length < 2) return null;
+
+  // Find the hour index and interpolate between the two hour cells
+  const hourIdx = Math.floor((nowMin - startMin) / 60);
+  const minInHour = nowMin - (startMin + hourIdx * 60);
+  const leftA = hourCellLefts[hourIdx] ?? 0;
+  const leftB = hourCellLefts[hourIdx + 1] ?? leftA + 60;
+  const left = leftA + ((leftB - leftA) * (minInHour / 60));
+
   return (
-    <div
-      style={{
-        position: "absolute",
-        top: 0,
-        left: `calc(${percent}% + 80px)`, // 80px for room name col
-        width: "2px",
-        height: "100%",
-        background: "rgba(239,68,68,0.85)",
-        zIndex: 10,
-        pointerEvents: "none",
-        boxShadow: "0 0 8px 2px rgba(239,68,68,0.18)"
-      }}
-      title="Current time"
-    />
+    <>
+      <div
+        style={{
+          position: "absolute",
+          top: 0,
+          left,
+          width: "6px",
+          height: "96%",
+          background: "rgba(239,68,68,0.92)",
+          zIndex: 20,
+          pointerEvents: "none",
+          boxShadow: "0 0 12px 2px rgba(239,68,68,0.18)",
+          borderRadius: "3px",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+        }}
+        title="Current time"
+      >
+        {/* NOW label at the bottom, always visible and inside the container */}
+        <div
+          className="now-glow"
+          style={{
+            position: "absolute",
+            left: "50%",
+            bottom: 0,
+            transform: "translate(-50%, 100%)",
+            background: "rgba(239,68,68,0.95)",
+            color: "#fff",
+            fontWeight: 700,
+            fontSize: "0.85rem",
+            borderRadius: "6px",
+            padding: "2px 10px 2px 10px",
+            boxShadow: "0 2px 8px rgba(239,68,68,0.13)",
+            letterSpacing: "1px",
+            pointerEvents: "none",
+            zIndex: 30,
+            whiteSpace: "nowrap",
+            maxWidth: 80,
+            textAlign: "center",
+            animation: "now-glow 1.2s infinite alternate",
+          }}
+        >
+          NOW
+        </div>
+      </div>
+    </>
   );
 }
 
