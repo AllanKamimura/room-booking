@@ -1,0 +1,40 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Room Booking API (rooms and booking endpoints)
+Globals:
+  Function:
+    CodeUri: src/
+    Timeout: 5
+    Runtime: python3.11
+Resources:
+  RoomsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: rooms/app.lambda_handler
+      Events:
+        RoomsApi:
+          Type: Api
+          Properties:
+            Path: /rooms
+            Method: get
+      CodeUri: RoomsFunction
+    Metadata:
+      SamResourceId: RoomsFunction
+  BookingFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: booking/app.lambda_handler
+      Events:
+        BookingApi:
+          Type: Api
+          Properties:
+            Path: /booking
+            Method: get
+      CodeUri: BookingFunction
+    Metadata:
+      SamResourceId: BookingFunction
+Outputs:
+  ApiUrl:
+    Description: API Gateway endpoint URL
+    Value:
+      Fn::Sub: https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/
