@@ -155,9 +155,10 @@ function App() {
     return () => window.removeEventListener("resize", updateHourCellLefts);
   }, [rooms, bookings]);
 
-  const [now, setNow] = useState(getNowInSaoPaulo());
+  // For the clock, use the real Date and format with Sao Paulo timezone
+  const [now, setNow] = useState(new Date());
   useEffect(() => {
-    const timer = setInterval(() => setNow(getNowInSaoPaulo()), 1000);
+    const timer = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
 
@@ -183,7 +184,7 @@ function App() {
           top: 18,
           right: 32,
           fontSize: "1.05rem",
-          color: "#6366f1",
+          color: "#00508c",
           fontWeight: 600,
           background: "rgba(255,255,255,0.85)",
           borderRadius: 8,
