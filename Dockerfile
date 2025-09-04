@@ -2,8 +2,10 @@
 FROM node:18-alpine AS build
 
 WORKDIR /app
-COPY package*.json ./
-COPY . .
+# Copy only necessary files for build
+COPY package.json package-lock.json tsconfig.json tsconfig.app.json tsconfig.node.json vite.config.ts index.html ./
+COPY src/ ./src/
+COPY public/ ./public/
 
 RUN npm ci
 RUN npm run build

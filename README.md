@@ -26,7 +26,7 @@ Designed for big screens, but works on any device.
 
 2. Set the API base URL in a `.env` file:
    ```
-   ROOM_API_BASE_URL=https://your-api-id.execute-api.region.amazonaws.com/Prod
+   VITE_ROOM_API_BASE_URL=http://localhost:3000
    ```
 
 3. Start the development server:
@@ -46,10 +46,22 @@ docker run -p 80:80 -e VITE_API_BASE_URL=https://your-api-id.execute-api.region.
 
 ### Docker Compose
 
-Edit `docker-compose.yml` to set your API base URL, then:
+Run both dummy backend and frontend using Docker Compose:
 ```bash
 docker-compose up --build
-```
+```  
+- Dummy backend will be built and available at http://localhost:3000  
+- Frontend will be available at http://localhost:5173 and fetch data from the backend  
+
+## Dummy Backend Container
+
+To build and run the dummy backend container standalone:
+
+```bash
+cd dummy-backend
+docker build -t dummy-backend .
+docker run -p 3000:3000 dummy-backend
+```  
 
 ---
 
@@ -85,7 +97,7 @@ After deployment, set your frontend's `ROOM_API_BASE_URL` to the deployed API Ga
 
 ## Environment Variables
 
-- `ROOM_API_BASE_URL`: Base URL for the backend API (e.g., https://your-api-id.execute-api.region.amazonaws.com/Prod)
+- `VITE_ROOM_API_BASE_URL`: Base URL for the backend API (e.g., http://localhost:3000)
 
 ---
 
