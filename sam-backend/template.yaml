@@ -9,10 +9,54 @@ Globals:
     Runtime: python3.11
 
 Resources:
+  RoomsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: Rooms
+      AttributeDefinitions:
+        - AttributeName: name
+          AttributeType: S
+        - AttributeName: color
+          AttributeType: S
+      KeySchema:
+        - AttributeName: name
+          KeyType: HASH
+      BillingMode: PAY_PER_REQUEST
+
+  BookingsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: Bookings
+      AttributeDefinitions:
+        - AttributeName: room
+          AttributeType: S
+        - AttributeName: start
+          AttributeType: S
+        - AttributeName: end
+          AttributeType: S
+      KeySchema:
+        - AttributeName: room
+          KeyType: HASH
+        - AttributeName: start
+          KeyType: RANGE
+      BillingMode: PAY_PER_REQUEST
+
   RoomsFunction:
     Type: AWS::Serverless::Function
     Properties:
       Handler: rooms/app.lambda_handler
+      Environment:
+        Variables:
+          ROOMS_TABLE: !Ref RoomsTable
+      Policies:
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:Scan
+                - dynamodb:Query
+              Resource: !GetAtt RoomsTable.Arn
       Events:
         RoomsApi:
           Type: Api
@@ -24,6 +68,18 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       Handler: booking/app.lambda_handler
+      Environment:
+        Variables:
+          BOOKINGS_TABLE: !Ref BookingsTable
+      Policies:
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:Scan
+                - dynamodb:Query
+              Resource: !GetAtt BookingsTable.Arn
       Events:
         BookingApi:
           Type: Api

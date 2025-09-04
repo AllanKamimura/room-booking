@@ -1,15 +1,28 @@
 import json
+import os
+
+import boto3
 
 
 def lambda_handler(event, context):
+    # Get table name from environment variable or use default
+    table_name = os.environ.get("ROOMS_TABLE", "Rooms")
+    dynamodb = boto3.resource("dynamodb")
+    table = dynamodb.Table(table_name)
+
+    # Scan the table to get all rooms
+    response = table.scan()
+    items = response.get("Items", [])
+
+    # Transform items to match expected output
     rooms = [
-        {"name": "Ada Lovelace", "color": "#2f9e74"},  # muted teal
-        {"name": "John von Neumann", "color": "#b23a76"},  # deep rose
-        {"name": "Alan Turing", "color": "#2b6cb0"},  # calm blue
-        {"name": "Dorothy Vaughan", "color": "#c0841a"},  # golden amber
-        {"name": "Santos Dumont", "color": "#7e57c2"},  # dusty violet
-        {"name": "Ayrton Senna", "color": "#d97706"},  # warm orange-brown
+        {
+            "name": item.get("name"),
+            "color": item.get("color"),
+        }
+        for item in items
     ]
+
     return {
         "statusCode": 200,
         "headers": {
