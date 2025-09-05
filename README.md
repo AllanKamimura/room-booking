@@ -4,6 +4,8 @@ A visually appealing, animated, and responsive dashboard for displaying meeting 
 
 Designed for big screens, but works on any device.
 
+![Main Page](assets/main_page.png)
+
 ## Features
 
 - **Animated, visually appealing table**: Each row is a room, columns are hours, bookings are colored blocks with random animations.
